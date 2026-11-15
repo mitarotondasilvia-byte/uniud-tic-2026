@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tastiera Sprint - Sfida di Digitazione</title>
+    <!-- Caricamento Tailwind CSS per lo styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Caricamento Font Google: Plus Jakarta Sans per l'interfaccia e JetBrains Mono per le parole -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Impostazioni font e variabili personalizzate per un look giocoso ma essenziale */
+        :root {
+            --bg-primary: #f8fafc;
+            --accent-main: #4f46e5;
+            --accent-hover: #4338ca;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at top left, #eef2ff 0%, #f8fafc 45%, #f0fdf4 100%);
+            min-height: 100vh;
+            color: #1e293b;
+            user-select: none;
+        }
+
+        .font-mono-word {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Animazione leggera per errori di battitura */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            50% { transform: translateX(6px); }
+            75% { transform: translateX(-4px); }
+        }
+
+        .animate-shake {
+            animation: shake 0.25s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* Animazione pop al completamento parola */
+        @keyframes popSuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+            100% { transform: scale(1); }
+        }
+
+        .animate-pop {
+            animation: popSuccess 0.2s ease-out;
+        }
+
+        /* Stile pulsanti giocosi con ombra tattile */
+        .btn-tactile {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 0 #3730a3;
+        }
+        .btn-tactile:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 0 #3730a3;
+        }
+        .btn-tactile:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #3730a3;
+        }
+
+        .btn-tactile-emerald {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 0 #047857;
+        }
+        .btn-tactile-emerald:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 0 #047857;
+        }
+        .btn-tactile-emerald:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #047857;
+        }
+
+        /* Barra del tempo fluida */
+        #time-bar {
+            transition: width 0.1s linear, background-color 0.5s ease;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between p-4 sm:p-6 md:p-8">
+
+    <!-- Intestazione minimale -->
+    <header class="w-full max-w-2xl flex items-center justify-between pt-2">
+        <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-200">
+                <!-- Icona tastiera SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="3" ry="3"></rect>
+                    <line x1="6" y1="8" x2="6.01" y2="8"></line>
+                    <line x1="10" y1="8" x2="10.01" y2="8"></line>
+                    <line x1="14" y1="8" x2="14.01" y2="8"></line>
+                    <line x1="18" y1="8" x2="18.01" y2="8"></line>
+                    <line x1="8" y1="12" x2="8.01" y2="12"></line>
+                    <line x1="12" y1="12" x2="12.01" y2="12"></line>
+                    <line x1="16" y1="12" x2="16.01" y2="12"></line>
+                    <line x1="7" y1="16" x2="17" y2="16"></line>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-800 leading-none">Tastiera Sprint</h1>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Sfida di velocità • 60 secondi</p>
+            </div>
+        </div>
+
+        <!-- Selettore modalità conferma -->
+        <div class="flex items-center gap-2 bg-white/80 backdrop-blur px-3 py-1.5 rounded-full border border-slate-200/80 shadow-sm">
+            <label for="auto-advance-toggle" class="text-xs font-semibold text-slate-600 cursor-pointer flex items-center gap-1.5">
+                <input type="checkbox" id="auto-advance-toggle" checked class="w-3.5 h-3.5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
+                <span>Avanzamento auto</span>
+            </label>
+        </div>
+    </header>
+
+    <!-- Area Centrale di Gioco -->
+    <main class="w-full max-w-2xl my-auto py-6">
+        
+        <!-- SCHERMATA DI GIOCO ATTIVA -->
+        <div id="game-view" class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-6 sm:p-10 transition-all">
+            
+            <!-- Metriche superiori: Tempo, Parole, Livello -->
+            <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+                <!-- Tempo Rimanente -->
+                <div class="bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-100 text-center">
+                    <span class="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">Tempo</span>
+                    <div class="flex items-baseline justify-center gap-0.5 mt-1">
+                        <span id="timer-display" class="text-2xl sm:text-3xl font-extrabold text-indigo-600 tabular-nums">60</span>
+                        <span class="text-xs font-bold text-slate-400">s</span>
+                    </div>
+                </div>
+
+                <!-- Parole Digitate -->
+                <div class="bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-100 text-center">
+                    <span class="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">Parole</span>
+                    <div class="mt-1">
+                        <span id="score-display" class="text-2xl sm:text-3xl font-extrabold text-slate-800 tabular-nums">0</span>
+                    </div>
+                </div>
+
+                <!-- Livello Attuale -->
+                <div class="bg-indigo-50/70 rounded-2xl p-3 sm:p-4 border border-indigo-100 text-center flex flex-col justify-center">
+                    <span class="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-indigo-400">Livello</span>
+                    <div class="mt-1 flex items-center justify-center gap-1">
+                        <span id="level-emoji" class="text-base sm:text-lg">🌱</span>
+                        <span id="level-display" class="text-xs sm:text-sm font-extrabold text-indigo-700 truncate">Principiante</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barra di avanzamento del tempo -->
+            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden mb-8 p-0.5 border border-slate-200/60">
+                <div id="time-bar" class="h-full w-full bg-indigo-600 rounded-full"></div>
+            </div>
+
+            <!-- Area visualizzazione parola target e parola successiva -->
+            <div class="text-center mb-6">
+                <!-- Anteprima parola successiva -->
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-xs sm:text-sm font-medium mb-4">
+                    <span>Prossima:</span>
+                    <span id="next-word-display" class="font-mono-word font-bold text-slate-700">...</span>
+                </div>
+
+                <!-- Parola Corrente con evidenziazione carattere per carattere -->
+                <div id="word-container" class="min-h-[4.5rem] sm:min-h-[5.5rem] flex items-center justify-center bg-slate-50/80 rounded-2xl border-2 border-dashed border-slate-200 px-4 py-3 mb-2 transition-colors">
+                    <div id="current-word-display" class="font-mono-word text-3xl sm:text-5xl font-bold tracking-wider select-none flex flex-wrap justify-center">
+                        <!-- Lettere generate dinamicamente -->
+                    </div>
+                </div>
+
+                <!-- Suggerimento contestuale -->
+                <p id="helper-text" class="text-xs text-slate-400 font-medium h-4">
+                    Inizia a digitare la parola qui sotto per avviare il timer!
+                </p>
+            </div>
+
+            <!-- Input di digitazione -->
+            <div class="relative max-w-md mx-auto">
+                <input 
+                    type="text" 
+                    id="word-input" 
+                    autocomplete="off" 
+                    autocorrect="off" 
+                    autocapitalize="off" 
+                    spellcheck="false"
+                    placeholder="Digita qui..."
+                    class="w-full text-center font-mono-word text-xl sm:text-2xl font-bold py-4 px-5 rounded-2xl bg-white border-2 border-indigo-200 text-slate-800 placeholder-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 transition-all shadow-sm"
+                >
+            </div>
+
+            <!-- Pulsanti di controllo rapido sotto l'input -->
+            <div class="flex items-center justify-center gap-3 mt-6">
+                <button id="start-btn" type="button" class="btn-tactile bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <span>Avvia ora</span>
+                </button>
+
+                <button id="reset-btn" type="button" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                        <path d="M3 3v5h5"></path>
+                    </svg>
+                    <span>Ricomincia</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SCHERMATA FINALE (RIEPILOGO E REPORT) -->
+        <div id="result-view" class="hidden bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-6 sm:p-10 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-100 text-3xl mb-4 shadow-inner">
+                🏆
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800">Tempo Scaduto!</h2>
+            <p class="text-slate-500 text-sm mt-1 mb-6">Ecco i risultati della tua sessione di digitazione</p>
+
+            <!-- Badge Livello Raggiunto -->
+            <div class="inline-flex items-center gap-2.5 bg-indigo-50 border border-indigo-100 px-5 py-2.5 rounded-2xl mb-6">
+                <span id="final-level-emoji" class="text-2xl">⚡</span>
+                <div class="text-left">
+                    <span class="block text-[10px] font-bold uppercase tracking-wider text-indigo-400">Livello Raggiunto</span>
+                    <span id="final-level-name" class="text-base sm:text-lg font-extrabold text-indigo-700">Veloce</span>
+                </div>
+            </div>
+
+            <!-- Griglia Statistiche Finali -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span class="block text-xs font-bold text-slate-400 uppercase">Parole</span>
+                    <span id="final-words" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1 block">0</span>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span class="block text-xs font-bold text-slate-400 uppercase">Tempo</span>
+                    <span id="final-time" class="text-2xl sm:text-3xl font-extrabold text-indigo-600 mt-1 block">60s</span>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span class="block text-xs font-bold text-slate-400 uppercase">Velocità</span>
+                    <span id="final-wpm" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1 block">0 <small class="text-xs font-bold">WPM</small></span>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span class="block text-xs font-bold text-slate-400 uppercase">Precisione</span>
+                    <span id="final-accuracy" class="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1 block">100%</span>
+                </div>
+            </div>
+
+            <!-- Azioni Finali: Scarica Report e Rigioca -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+                <button id="download-report-btn" type="button" class="w-full sm:w-auto btn-tactile-emerald bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Scarica Report (.txt)</span>
+                </button>
+
+                <button id="play-again-btn" type="button" class="w-full sm:w-auto btn-tactile bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                        <path d="M3 3v5h5"></path>
+                    </svg>
+                    <span>Gioca ancora</span>
+                </button>
+            </div>
+
+            <!-- Notifica conferma download (sostituisce alert) -->
+            <div id="download-toast" class="hidden mt-4 inline-flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-full">
+                <span>✅ Report scaricato con successo!</span>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer essenziale con legenda livelli -->
+    <footer class="w-full max-w-2xl text-center pb-2">
+        <div class="inline-flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-slate-400 font-medium">
+            <span>🌱 Principiante (&lt;15)</span>
+            <span>🚀 Apprendista (15-24)</span>
+            <span>⚡ Veloce (25-39)</span>
+            <span>🔥 Esperto (40-54)</span>
+            <span>🌩️ Fulmine (55-69)</span>
+            <span>👑 Leggenda (70+)</span>
+        </div>
+    </footer>
+
+    <script>
+        /**
+         * Dizionario ampio di parole italiane variegate (brevi, medie e lunghe/impegnative)
+         * Tutte minuscole e prive di caratteri ambigui per garantire fluidità di battitura.
+         */
+        const ITALIAN_WORDS = [
+            // Parole comuni e brevi
+            "casa", "sole", "mare", "libro", "tempo", "amico", "strada", "giorno", "notte", "acqua",
+            "fuoco", "terra", "vento", "cuore", "mente", "mano", "porta", "vetro", "carta", "penna",
+            "sedia", "tavolo", "letto", "cielo", "stella", "luna", "nuvola", "pioggia", "neve", "fiore",
+            "albero", "foglia", "frutto", "pane", "latte", "caffe", "dolce", "sale", "olio", "vino",
+            "treno", "aereo", "nave", "ruota", "motore", "strada", "ponte", "piazza", "torre", "museo",
+            "scuola", "classe", "studio", "esame", "laurea", "lavoro", "ufficio", "progetto", "idea", "piano",
+            "musica", "suono", "canto", "ritmo", "piano", "chitarra", "violino", "teatro", "cinema", "attore",
+            "colore", "rosso", "verde", "giallo", "bianco", "nero", "azzurro", "viola", "arancio", "grigio",
+            "veloce", "rapido", "lento", "forte", "chiaro", "scuro", "nuovo", "antico", "grande", "piccolo",
+            "felice", "sereno", "calmo", "allegro", "gentile", "onesto", "libero", "giusto", "vero", "semplice",
+
+            // Parole di media lunghezza
+            "tastiera", "schermo", "finestra", "computer", "internet", "digitare", "scrivere", "leggere", "parola", "lettera",
+            "messaggio", "risposta", "domanda", "ricerca", "scoperta", "viaggio", "valigia", "biglietto", "stazione", "binario",
+            "montagna", "collina", "pianura", "fiume", "cascata", "foresta", "sentiero", "giardino", "balcone", "terrazza",
+            "cucina", "fornello", "piatto", "bicchiere", "coltello", "forchetta", "cucchiaio", "tovaglia", "ricetta", "sapore",
+            "orologio", "minuto", "secondo", "mattina", "pomeriggio", "tramonto", "stagione", "inverno", "estate", "autunno",
+            "primavera", "domenica", "sabato", "venerdi", "giovedi", "mercoledi", "martedi", "lunedi", "gennaio", "agosto",
+            "squadra", "partita", "vittoria", "sfida", "premio", "medaglia", "campione", "allenamento", "energia", "equilibrio",
+            "memoria", "pensiero", "sogno", "ricordo", "futuro", "presente", "passato", "storia", "cultura", "scienza",
+
+            // Parole più impegnative e ricche di consonanti/doppie
+            "velocita", "precisione", "concentrazione", "allenamento", "apprendimento", "miglioramento", "costanza", "impegno",
+            "architettura", "tecnologia", "programmazione", "algoritmo", "sviluppo", "applicazione", "interfaccia", "tastierino",
+            "meraviglioso", "straordinario", "fantastico", "incredibile", "entusiasmo", "creativita", "immaginazione", "ispirazione",
+            "indipendenza", "responsabilita", "collaborazione", "comunicazione", "organizzazione", "pianificazione", "strategia",
+            "biblioteca", "universita", "laboratorio", "esperimento", "osservazione", "conoscenza", "esperienza", "competenza",
+            "trasparente", "luminoso", "orizzonte", "avventura", "esplorazione", "destinazione", "itinerario", "passaporto",
+            "cioccolato", "pasticceria", "colazione", "ristorante", "ingrediente", "tradizione", "artigianato", "capolavoro"
+        ];
+
+        // Definizione livelli in base alle parole digitate in 1 minuto
+        const LEVELS = [
+            { minWords: 0,  name: "Principiante", emoji: "🌱" },
+            { minWords: 15, name: "Apprendista",  emoji: "🚀" },
+            { minWords: 25, name: "Veloce",       emoji: "⚡" },
+            { minWords: 40, name: "Esperto",      emoji: "🔥" },
+            { minWords: 55, name: "Fulmine",      emoji: "🌩️" },
+            { minWords: 70, name: "Leggenda della Tastiera", emoji: "👑" }
+        ];
+
+        // Costanti di gioco
+        const GAME_DURATION = 60; // secondi
+
+        // Stato della sessione
+        let state = {
+            isPlaying: false,
+            isFinished: false,
+            timeRemaining: GAME_DURATION,
+            timerInterval: null,
+            startTime: null,
+            wordsCompleted: 0,
+            correctKeystrokes: 0,
+            totalKeystrokes: 0,
+            currentWord: "",
+            nextWord: "",
+            wordHistory: [], // Salva le parole completate per il report
+            lastUsedWords: new Set()
+        };
+
+        // Riferimenti DOM
+        const gameView = document.getElementById("game-view");
+        const resultView = document.getElementById("result-view");
+        const timerDisplay = document.getElementById("timer-display");
+        const timeBar = document.getElementById("time-bar");
+        const scoreDisplay = document.getElementById("score-display");
+        const levelDisplay = document.getElementById("level-display");
+        const levelEmoji = document.getElementById("level-emoji");
+        const currentWordDisplay = document.getElementById("current-word-display");
+        const nextWordDisplay = document.getElementById("next-word-display");
+        const wordContainer = document.getElementById("word-container");
+        const wordInput = document.getElementById("word-input");
+        const helperText = document.getElementById("helper-text");
+        const startBtn = document.getElementById("start-btn");
+        const resetBtn = document.getElementById("reset-btn");
+        const autoAdvanceToggle = document.getElementById("auto-advance-toggle");
+
+        // Riferimenti DOM schermata finale
+        const finalWordsEl = document.getElementById("final-words");
+        const finalTimeEl = document.getElementById("final-time");
+        const finalWpmEl = document.getElementById("final-wpm");
+        const finalAccuracyEl = document.getElementById("final-accuracy");
+        const finalLevelNameEl = document.getElementById("final-level-name");
+        const finalLevelEmojiEl = document.getElementById("final-level-emoji");
+        const downloadReportBtn = document.getElementById("download-report-btn");
+        const playAgainBtn = document.getElementById("play-again-btn");
+        const downloadToast = document.getElementById("download-toast");
+
+        /**
+         * Estrae una parola casuale evitando ripetizioni immediate
+         */
+        function getRandomWord() {
+            if (state.lastUsedWords.size > ITALIAN_WORDS.length - 10) {
+                state.lastUsedWords.clear();
+            }
+            let word = "";
+            do {
+                const idx = Math.floor(Math.random() * ITALIAN_WORDS.length);
+                word = ITALIAN_WORDS[idx];
+            } while (state.lastUsedWords.has(word));
+            
+            state.lastUsedWords.add(word);
+            return word;
+        }
+
+        /**
+         * Calcola il livello attuale in base alle parole completate
+         */
+        function getCurrentLevel(wordCount) {
+            let current = LEVELS[0];
+            for (const lvl of LEVELS) {
+                if (wordCount >= lvl.minWords) {
+                    current = lvl;
+                } else {
+                    break;
+                }
+            }
+            return current;
+        }
+
+        /**
+         * Renderizza la parola corrente evidenziando ogni carattere in base all'input dell'utente
+         */
+        function renderCurrentWord() {
+            const typed = wordInput.value;
+            const target = state.currentWord;
+            currentWordDisplay.innerHTML = "";
+
+            for (let i = 0; i < target.length; i++) {
+                const charSpan = document.createElement("span");
+                charSpan.textContent = target[i];
+                charSpan.className = "transition-colors duration-75 px-[1px] rounded";
+
+                if (i < typed.length) {
+                    if (typed[i] === target[i]) {
+                        // Carattere corretto
+                        charSpan.classList.add("text-emerald-600", "bg-emerald-50");
+                    } else {
+                        // Carattere errato
+                        charSpan.classList.add("text-rose-600", "bg-rose-100", "underline", "decoration-rose-500");
+                    }
+                } else if (i === typed.length) {
+                    // Prossimo carattere da digitare (cursore visivo)
+                    charSpan.classList.add("text-indigo-600", "border-b-2", "border-indigo-500");
+                } else {
+                    // Caratteri ancora da digitare
+                    charSpan.classList.add("text-slate-700");
+                }
+
+                currentWordDisplay.appendChild(charSpan);
+            }
+
+            // Se l'utente digita caratteri in eccesso oltre la lunghezza della parola
+            if (typed.length > target.length) {
+                const extra = typed.slice(target.length);
+                const extraSpan = document.createElement("span");
+                extraSpan.textContent = extra;
+                extraSpan.className = "text-rose-600 bg-rose-100 line-through px-1 rounded ml-0.5";
+                currentWordDisplay.appendChild(extraSpan);
+            }
+        }
+
+        /**
+         * Aggiorna i contatori a schermo (punteggio, livello, timer, barra)
+         */
+        function updateUIStats() {
+            scoreDisplay.textContent = state.wordsCompleted;
+            const level = getCurrentLevel(state.wordsCompleted);
+            levelDisplay.textContent = level.name;
+            levelEmoji.textContent = level.emoji;
+        }
+
+        /**
+         * Aggiorna la barra visiva del tempo e il numero
+         */
+        function updateTimerDisplay() {
+            const secs = Math.max(0, Math.ceil(state.timeRemaining));
+            timerDisplay.textContent = secs;
+
+            const percentage = Math.max(0, (state.timeRemaining / GAME_DURATION) * 100);
+            timeBar.style.width = `${percentage}%`;
+
+            // Cambio colore barra negli ultimi secondi per dare tensione giocosa
+            if (state.timeRemaining <= 10) {
+                timeBar.classList.remove("bg-indigo-600", "bg-amber-500");
+                timeBar.classList.add("bg-rose-500");
+                timerDisplay.classList.remove("text-indigo-600", "text-amber-600");
+                timerDisplay.classList.add("text-rose-600");
+            } else if (state.timeRemaining <= 25) {
+                timeBar.classList.remove("bg-indigo-600", "bg-rose-500");
+                timeBar.classList.add("bg-amber-500");
+                timerDisplay.classList.remove("text-indigo-600", "text-rose-600");
+                timerDisplay.classList.add("text-amber-600");
+            } else {
+                timeBar.classList.remove("bg-amber-500", "bg-rose-500");
+                timeBar.classList.add("bg-indigo-600");
+                timerDisplay.classList.remove("text-amber-600", "text-rose-600");
+                timerDisplay.classList.add("text-indigo-600");
+            }
+        }
+
+        /**
+         * Avvia il timer da 60 secondi
+         */
+        function startTimer() {
+            if (state.isPlaying) return;
+            state.isPlaying = true;
+            state.startTime = Date.now();
+
+            startBtn.classList.add("hidden");
+            resetBtn.classList.remove("hidden");
+            helperText.textContent = autoAdvanceToggle.checked 
+                ? "Digita la parola esatta per passare subito alla successiva!" 
+                : "Digita la parola e premi SPAZIO o INVIO per confermare.";
+
+            // Aggiornamento ogni 100ms per una barra fluida e precisa
+            state.timerInterval = setInterval(() => {
+                const elapsed = (Date.now() - state.startTime) / 1000;
+                state.timeRemaining = Math.max(0, GAME_DURATION - elapsed);
+                updateTimerDisplay();
+
+                if (state.timeRemaining <= 0) {
+                    endGame();
+                }
+            }, 100);
+        }
+
+        /**
+         * Passa alla parola successiva
+         */
+        function advanceWord() {
+            state.wordsCompleted++;
+            state.wordHistory.push(state.currentWord);
+
+            // Animazione positiva sul box parola
+            wordContainer.classList.remove("animate-pop", "border-rose-300", "bg-rose-50/40");
+            void wordContainer.offsetWidth; // trigger reflow
+            wordContainer.classList.add("animate-pop", "border-emerald-300", "bg-emerald-50/40");
+            
+            setTimeout(() => {
+                wordContainer.classList.remove("border-emerald-300", "bg-emerald-50/40");
+            }, 220);
+
+            state.currentWord = state.nextWord;
+            state.nextWord = getRandomWord();
+            nextWordDisplay.textContent = state.nextWord;
+
+            wordInput.value = "";
+            renderCurrentWord();
+            updateUIStats();
+        }
+
+        /**
+         * Segnala visivamente un tentativo di conferma errato
+         */
+        function triggerErrorFeedback() {
+            wordContainer.classList.remove("animate-shake");
+            void wordContainer.offsetWidth;
+            wordContainer.classList.add("animate-shake", "border-rose-300", "bg-rose-50/40");
+            setTimeout(() => {
+                wordContainer.classList.remove("border-rose-300", "bg-rose-50/40");
+            }, 300);
+        }
+
+        /**
+         * Gestisce la fine del minuto di gioco
+         */
+        function endGame() {
+            clearInterval(state.timerInterval);
+            state.isPlaying = false;
+            state.isFinished = true;
+            state.timeRemaining = 0;
+            updateTimerDisplay();
+
+            wordInput.disabled = true;
+
+            // Calcolo metriche finali
+            const level = getCurrentLevel(state.wordsCompleted);
+            const accuracy = state.totalKeystrokes > 0 
+                ? Math.round((state.correctKeystrokes / state.totalKeystrokes) * 100) 
+                : 100;
+            // WPM coincide con le parole completate in 60s
+            const wpm = state.wordsCompleted;
+
+            finalWordsEl.textContent = state.wordsCompleted;
+            finalTimeEl.textContent = `${GAME_DURATION}s`;
+            finalWpmEl.innerHTML = `${wpm} <small class="text-xs font-bold">WPM</small>`;
+            finalAccuracyEl.textContent = `${accuracy}%`;
+            finalLevelNameEl.textContent = level.name;
+            finalLevelEmojiEl.textContent = level.emoji;
+
+            downloadToast.classList.add("hidden");
+
+            // Transizione alla schermata risultati
+            gameView.classList.add("hidden");
+            resultView.classList.remove("hidden");
+        }
+
+        /**
+         * Inizializza o resetta completamente il gioco
+         */
+        function resetGame() {
+            clearInterval(state.timerInterval);
+            
+            state = {
+                isPlaying: false,
+                isFinished: false,
+                timeRemaining: GAME_DURATION,
+                timerInterval: null,
+                startTime: null,
+                wordsCompleted: 0,
+                correctKeystrokes: 0,
+                totalKeystrokes: 0,
+                currentWord: getRandomWord(),
+                nextWord: getRandomWord(),
+                wordHistory: [],
+                lastUsedWords: new Set()
+            };
+
+            state.lastUsedWords.add(state.currentWord);
+            state.lastUsedWords.add(state.nextWord);
+
+            wordInput.disabled = false;
+            wordInput.value = "";
+            nextWordDisplay.textContent = state.nextWord;
+            helperText.textContent = "Inizia a digitare la parola qui sopra per avviare il timer!";
+
+            startBtn.classList.remove("hidden");
+            resetBtn.classList.add("hidden");
+
+            resultView.classList.add("hidden");
+            gameView.classList.remove("hidden");
+
+            updateTimerDisplay();
+            updateUIStats();
+            renderCurrentWord();
+
+            setTimeout(() => wordInput.focus(), 50);
+        }
+
+        /**
+         * Genera e avvia il download del report della sessione in formato .txt
+         */
+        function downloadSessionReport() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString("it-IT", {
+                day: "2-digit", month: "2-digit", year: "numeric"
+            });
+            const timeStr = now.toLocaleTimeString("it-IT", {
+                hour: "2-digit", minute: "2-digit", second: "2-digit"
+            });
+
+            const level = getCurrentLevel(state.wordsCompleted);
+            const accuracy = state.totalKeystrokes > 0 
+                ? Math.round((state.correctKeystrokes / state.totalKeystrokes) * 100) 
+                : 100;
+
+            const reportLines = [
+                "====================================================",
+                "       REPORT SESSIONE - TASTIERA SPRINT",
+                "====================================================",
+                `Data e Ora:          ${dateStr} alle ${timeStr}`,
+                "----------------------------------------------------",
+                "INDICATORI PRINCIPALI:",
+                `• Quantità di parole digitate:  ${state.wordsCompleted}`,
+                `• Tempo impiegato:              ${GAME_DURATION} secondi (1 minuto)`,
+                `• Livello raggiunto:            ${level.emoji} ${level.name}`,
+                "----------------------------------------------------",
+                "DETTAGLI AGGIUNTIVI:",
+                `• Velocità media:               ${state.wordsCompleted} parole/minuto (WPM)`,
+                `• Precisione di battitura:      ${accuracy}%`,
+                `• Battute corrette / totali:    ${state.correctKeystrokes} / ${state.totalKeystrokes}`,
+                "----------------------------------------------------",
+                "ELENCO PAROLE COMPLETATE:",
+                state.wordHistory.length > 0 ? state.wordHistory.join(", ") : "(Nessuna parola completata)",
+                "===================================================="
+            ];
+
+            const content = reportLines.join("\n");
+            const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+
+            const filenameDate = now.toISOString().slice(0, 10);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `Report_TastieraSprint_${filenameDate}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            // Mostra feedback visivo dell'avvenuto download
+            downloadToast.classList.remove("hidden");
+        }
+
+        // --- EVENT LISTENERS ---
+
+        // Input dell'utente
+        wordInput.addEventListener("input", (e) => {
+            if (state.isFinished) return;
+
+            // Avvia automaticamente il timer al primo carattere inserito
+            if (!state.isPlaying && wordInput.value.trim().length > 0) {
+                startTimer();
+            }
+
+            const rawValue = wordInput.value;
+            
+            // Gestione conferma tramite barra spaziatrice
+            if (rawValue.endsWith(" ")) {
+                const trimmed = rawValue.trim();
+                if (trimmed === state.currentWord) {
+                    advanceWord();
+                } else {
+                    wordInput.value = trimmed;
+                    triggerErrorFeedback();
+                    renderCurrentWord();
+                }
+                return;
+            }
+
+            // Conteggio precisione battute (solo su inserimento nuovi caratteri)
+            if (e.inputType && e.inputType.startsWith("insert")) {
+                state.totalKeystrokes++;
+                const idx = rawValue.length - 1;
+                if (idx < state.currentWord.length && rawValue[idx] === state.currentWord[idx]) {
+                    state.correctKeystrokes++;
+                }
+            }
+
+            // Se l'avanzamento automatico è attivo e la parola corrisponde esattamente
+            if (autoAdvanceToggle.checked && rawValue === state.currentWord) {
+                advanceWord();
+                return;
+            }
+
+            renderCurrentWord();
+        });
+
+        // Gestione tasto Invio per confermare manualmente
+        wordInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !state.isFinished) {
+                e.preventDefault();
+                const trimmed = wordInput.value.trim();
+                if (trimmed === state.currentWord) {
+                    advanceWord();
+                } else if (trimmed.length > 0) {
+                    triggerErrorFeedback();
+                }
+            }
+        });
+
+        // Pulsante Avvia manuale
+        startBtn.addEventListener("click", () => {
+            startTimer();
+            wordInput.focus();
+        });
+
+        // Pulsante Ricomincia durante la partita
+        resetBtn.addEventListener("click", () => {
+            resetGame();
+        });
+
+        // Pulsante Rigioca nella schermata finale
+        playAgainBtn.addEventListener("click", () => {
+            resetGame();
+        });
+
+        // Pulsante Scarica Report
+        downloadReportBtn.addEventListener("click", () => {
+            downloadSessionReport();
+        });
+
+        // Cambio opzione avanzamento automatico mantiene il focus sull'input
+        autoAdvanceToggle.addEventListener("change", () => {
+            if (state.isPlaying) {
+                helperText.textContent = autoAdvanceToggle.checked 
+                    ? "Digita la parola esatta per passare subito alla successiva!" 
+                    : "Digita la parola e premi SPAZIO o INVIO per confermare.";
+            }
+            wordInput.focus();
+        });
+
+        // Avvio iniziale al caricamento della pagina
+        window.addEventListener("load", () => {
+            resetGame();
+        });
+    </script>
+</body>
+</html>
